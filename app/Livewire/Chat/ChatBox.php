@@ -12,19 +12,42 @@ class ChatBox extends Component
     public $selectedConversation ;
     public $body ;
     public $loadedMessages ;
+    public  $pagainateVar = 10;
 
 
+    protected $listeners = ['loadMore' , 'update-chat-height'];
 
+    public function loadMore()
+    {
+        //dd('detected');
+         $this->pagainateVar += 10;
+
+         $this->loadMessages();
+
+         $this->dispatch('update-chat-height');
+
+    }
 
 
     public function loadMessages()
     {
-        $this->loadedMessages = Message::where('conversation_id' , $this->selectedConversation->id )->get();
+
+        //get count
+        $count = Message::where('conversation_id' , $this->selectedConversation->id )->count();
+
+
+        //skip and query
+        $this->loadedMessages = Message::where('conversation_id' , $this->selectedConversation->id )
+            ->skip($count - $this->pagainateVar )   //
+            ->take($this->pagainateVar)
+            ->get();
+
+       return $this->loadedMessages;
 
         //dd($this->loadedMessages);
 
-
     }
+
     public  function sendMessage()
     {
 
