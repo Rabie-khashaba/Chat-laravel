@@ -39,7 +39,7 @@ class Conversation extends Model
     {
 
         $user = Auth()->User();
-        $lastMessage = $this->messages()->latest()->first();
+        $lastMessage = $this->messages()->latest()->first();  // get last table message
 
         if ($lastMessage) {
             return $lastMessage->read_at !== null && $lastMessage->sender_id == $user->id;

@@ -6,7 +6,7 @@
 }"
     x-init="
         height= conversationElement.scrollHeight;
-        $nextTick(()=>conversationElement.scrollTop= height);
+        $nextTick(()=>conversationElement.scrollTop= height); {{--تأجيل الكود إلى ما بعد تحديث DOM فقط--}}
 
 
 {{--        Echo.private('users.{{Auth()->User()->id}}')--}}
@@ -19,17 +19,14 @@
 {{--        });--}}
  "
 
-    @scroll-bottom.window="
- $nextTick(()=>
- conversationElement.scrollTop= conversationElement.scrollHeight
- );
- "
+    @scroll-bottom.window="    {{--used in chatBox component--}}
+         $nextTick(()=>
+         conversationElement.scrollTop= conversationElement.scrollHeight
+         );
+         "
 
     class="w-full overflow-hidden">
-
     <div class="border-b flex flex-col overflow-y-scroll grow h-full">
-
-
         {{-- header --}}
         <header class="w-full sticky inset-x-0 flex pb-[5px] pt-[5px] top-0 z-10 bg-white border-b ">
 
@@ -56,7 +53,6 @@
                 </div>
 
 
-
                 <h6 class="font-bold truncate">{{$selectedConversation->getReceiver()->email}} </h6>
 
 
@@ -65,85 +61,96 @@
 
         </header>
 
-
         {{-- body --}}
         <main
+
             @scroll="
-      scropTop = $el.scrollTop;
+          scropTop = $el.scrollTop;
+          if(scropTop <= 0){
+            window.livewire.emit('loadMore');
+          }"
 
-      if(scropTop <= 0){
-
-        window.livewire.emit('loadMore');
-
-      }
-     "
             @update-chat-height.window="
+             newHeight= $el.scrollHeight;
+             oldHeight= height;
+             $el.scrollTop= newHeight- oldHeight;
+             height=newHeight;
+             "
 
-         newHeight= $el.scrollHeight;
-
-         oldHeight= height;
-         $el.scrollTop= newHeight- oldHeight;
-
-         height=newHeight;
-
-     "
             id="conversation"
             class="flex flex-col gap-3 p-2.5 overflow-y-auto  flex-grow overscroll-contain overflow-x-hidden w-full my-auto">
 
 
-            <div
+            @if ($loadedMessages)
 
-                @class([
-                    'max-w-[85%] md:max-w-[78%] flex w-auto gap-2 relative mt-2',
-//                            'ml-auto'=>$message->sender_id=== auth()->id(),
-                        ]) >
+                @php
+                    $previousMessage= null;
+                @endphp
 
-                {{--                         avatar--}}
+                @foreach($loadedMessages as $key=> $message)
 
-                <div @class([
+                    {{-- keep track of the previous message --}}
+
+                    @if ($key>0)
+
+                        @php
+                            $previousMessage= $loadedMessages->get($key-1)
+                        @endphp
+                    @endif
+
+                    <div
+
+                        @class([
+                            'max-w-[85%] md:max-w-[78%] flex w-auto gap-2 relative mt-2',
+                                    'ml-auto'=>$message->sender_id=== auth()->id(),   //هتكون أول الصفحه من اليمين
+                                ]) >
+
+                        {{--avatar--}}
+
+                        <div @class([
                     'shrink-0',
-//                    'invisible'=>$previousMessage?->sender_id==$message->sender_id,
-//                    'hidden'=>$message->sender_id === auth()->id()
+                    'invisible'=>$previousMessage?->sender_id==$message->sender_id,//remove the avatar if messages from same sender
+                    'hidden'=>$message->sender_id === auth()->id()
                         ])>
 
-                    <x-avatar/>
-                </div>
-                {{--                         messsage body--}}
+                            <x-avatar/>
+                        </div>
+                        {{--  messsage body--}}
 
-                <div @class(['flex flex-wrap text-[15px]  rounded-xl p-2.5 flex flex-col text-black bg-[#f6f6f8fb]',
-//                         'rounded-bl-none border  border-gray-200/40 '=>!($message->sender_id=== auth()->id()),
-//                         'rounded-br-none bg-blue-500/80 text-white'=>$message->sender_id=== auth()->id()
+                        <div @class(['flex flex-wrap text-[15px]  rounded-xl p-2.5 flex flex-col text-black bg-[#f6f6f8fb]',
+                         'rounded-bl-none border  border-gray-200/40 '=>!($message->sender_id === auth()->id()),
+                         'rounded-br-none bg-blue-500/80 text-white'=>$message->sender_id=== auth()->id()
                            ])>
 
 
-                    <p class="whitespace-normal truncate text-sm md:text-base tracking-wide lg:tracking-normal">
-                        {{--                                {{$message->body}}--}}
-                        kkkkkkkkkkkkkkkkkkkkk
-                    </p>
+                            <p class="whitespace-normal truncate text-sm md:text-base tracking-wide lg:tracking-normal">
+                                {{$message->body}}
+                            </p>
 
 
-                    <div class="ml-auto flex gap-2">
+                            <div class="ml-auto flex gap-2">
 
-                        <p @class([
+                                <p @class([
                                     'text-xs ',
-                //                    'text-gray-500'=>!($message->sender_id=== auth()->id()),
-                //                    'text-white'=>$message->sender_id=== auth()->id(),
+                                    'text-gray-500'=>!($message->sender_id=== auth()->id()),
+                                    'text-white'=>$message->sender_id=== auth()->id(),
                         ]) >
 
 
-                            {{--                                    {{$message->created_at->format('g:i a')}}--}}
+                                    {{$message->created_at->format('g:i a')}}
 
-                        </p>
+                                </p>
 
 
-                        {{--                                 message status , only show if message belongs auth--}}
+                                {{--                                 message status , only show if message belongs auth--}}
 
-                        {{--                                @if ($message->sender_id=== auth()->id())--}}
-                        {{--                                x-data="{markAsRead:@json($message->isRead())}"--}}
-                        <div>
+                                @if ($message->sender_id=== auth()->id())
 
-                            {{--                                         double ticks--}}
-                            <span x-cloak x-show="markAsRead" @class('text-gray-200')>
+                                    <div>
+
+                                        @if($message->isRead())
+                                            {{--                                         double ticks--}}
+                                            <span  @class('text-gray-200')>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                                          class="bi bi-check2-all" viewBox="0 0 16 16">
                                         <path
@@ -152,28 +159,32 @@
                                     </svg>
                                 </span>
 
-                            {{--                                         single ticks--}}
-                            <span x-show="!markAsRead" @class('text-gray-200')>
+                                        @else
+                                            {{--                        <div  x-data="{markAsRead:@json($message->isRead())}" >--}}
+
+                                            {{-- single ticks--}}
+                                            <span @class('text-gray-200') >
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                                          class="bi bi-check2" viewBox="0 0 16 16">
                                         <path
                                             d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
                                     </svg>
                                 </span>
+                                        @endif
+
+                                    </div>
+                                @endif
+
+
+                            </div>
 
                         </div>
-                        {{--                                @endif--}}
 
 
                     </div>
 
-                </div>
-
-
-            </div>
-
-            {{--                @endforeach--}}
-            {{--            @endif--}}
+                @endforeach
+            @endif
 
         </main>
 
@@ -185,7 +196,7 @@
             <div class=" p-2 border-t">
 
                 <form
-                    x-data="{body:@entangle('body').defer}"
+                    x-data="{body:@entangle('body')}"
                     @submit.prevent="$wire.sendMessage"
                     method="POST" autocapitalize="off">
                     @csrf
@@ -211,13 +222,11 @@
 
                 @error('body')
 
-                <p></p>
+                <p> {{$message}} </p>
 
                 @enderror
 
             </div>
-
-
         </footer>
 
     </div>
