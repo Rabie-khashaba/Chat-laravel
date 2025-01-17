@@ -2,7 +2,11 @@
 
 namespace App\Livewire\Chat;
 
+use App\Events\SendMessage;
+use \App\Events\MessageRead;
 use App\Models\Message;
+use App\Notifications\MessageSent;
+
 use Livewire\Component;
 
 class ChatBox extends Component
@@ -15,7 +19,61 @@ class ChatBox extends Component
     public  $pagainateVar = 10;
 
 
-    protected $listeners = ['loadMore' , 'update-chat-height'];
+    protected $listeners = ['loadMore' ];
+
+
+    public function getListeners()
+    {
+
+        $auth_id = auth()->user()->id;
+
+        return [
+
+
+            //"echo-private:users.{$auth_id},.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated" => 'broadcastedNotifications',
+            "echo-private:users.{$auth_id},.App\\Events\\SendMessage" => 'broadcastedNotifications',
+            'loadMore'
+        ];
+    }
+
+    public function broadcastedNotifications($event)
+    {
+
+        //dd($event);
+
+
+//        if ($event['type_e'] == MessageSent::class) {
+
+            if ($event['conversation_id'] == $this->selectedConversation->id) {
+
+                $this->dispatch('scroll-bottom');
+
+
+                $newMessage = Message::find($event['message_id']);
+
+                #push message in page of receiver (realtime)
+                $this->loadedMessages->push($newMessage);
+
+                #mark as read
+                $newMessage->read_at = now();
+                $newMessage->save();
+                $this->dispatch('refresh');
+
+                #broadcast
+//                $this->selectedConversation->getReceiver()
+//                    ->notify(new MessageRead($this->selectedConversation->id));
+
+
+                broadcast(new MessageRead(
+                    $this->selectedConversation->id,
+                    $this->selectedConversation->getReceiver()->id,
+                ));
+
+
+
+            }
+//        }
+    }
 
     public function loadMore()
     {
@@ -34,7 +92,6 @@ class ChatBox extends Component
 
         //get count
         $count = Message::where('conversation_id' , $this->selectedConversation->id )->count();
-
 
         //skip and query
         $this->loadedMessages = Message::where('conversation_id' , $this->selectedConversation->id )
@@ -67,19 +124,38 @@ class ChatBox extends Component
         // scroll to bottom
         $this->dispatch('scroll-bottom');
 
-        // push message
+        // push message in same page of sender
         $this->loadedMessages->push($createdMessage);
-
-        #refresh chatlist
-        $this->dispatch('refresh');    // emit not work in livewire 3
 
         //Update conversation
         $this->selectedConversation->updated_at = now() ;
         $this->selectedConversation->save();
 
+        #refresh chatlist
+        $this->dispatch('refresh');    // emit not work in livewire 3
+
+        //broadcast
+//        $this->selectedConversation->getReceiver()
+//            ->notify(new MessageSent(
+//                Auth()->User(),
+//                $createdMessage,
+//                $this->selectedConversation,
+//                $this->selectedConversation->getReceiver()->id
+//            ));
+
+
+        broadcast(new SendMessage(
+                Auth()->User(),
+                $createdMessage,
+                $this->selectedConversation,
+                $this->selectedConversation->getReceiver()->id,
+        ));
 
 
     }
+
+
+
 
 
 

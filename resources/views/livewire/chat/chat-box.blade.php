@@ -17,6 +17,15 @@
 {{--                markAsRead=true;--}}
 {{--            }--}}
 {{--        });--}}
+
+
+            Echo.private(`users.${userId}`)
+        .listen('.MessageRead', (event) => {
+            if ( event.conversation_id === {{ $this->selectedConversation->id }}) {
+                markAsRead = true;
+            }
+        });
+
  "
 
     @scroll-bottom.window="    {{--used in chatBox component--}}
@@ -147,7 +156,7 @@
 
                                 @if ($message->sender_id=== auth()->id())
 
-                                    <div>
+                                    <div  x-data="{markAsRead:@json($message->isRead())}">
 
                                         @if($message->isRead())
                                             {{--                                         double ticks--}}
@@ -233,3 +242,5 @@
     </div>
 
 </div>
+
+
