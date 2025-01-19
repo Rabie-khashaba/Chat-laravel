@@ -18,10 +18,12 @@ class MessageRead extends Notification implements ShouldBroadcast
      */
 
     public $conversation_id;
-    public function __construct($conversation_id)
+    public $receiverId;
+    public function __construct($conversation_id , $receiverId)
     {
         //
         $this->conversation_id=$conversation_id;
+        $this->receiverId=$receiverId;
     }
 
     /**
@@ -41,6 +43,7 @@ class MessageRead extends Notification implements ShouldBroadcast
         return new BroadcastMessage([
 
             'conversation_id' => $this->conversation_id,
+            'receiver_id' => $this->receiverId,
 
         ]);
     }

@@ -1,4 +1,6 @@
 <div
+    wire:poll     {{--  Messages will refresh automatically --}}
+
     x-data="{
     height:0,
     conversationElement:document.getElementById('conversation'),
@@ -8,25 +10,33 @@
         height= conversationElement.scrollHeight;
         $nextTick(()=>conversationElement.scrollTop= height); {{--تأجيل الكود إلى ما بعد تحديث DOM فقط--}}
 
+            @if($this->selectedConversation)
+                    Echo.private('users.{{ auth()->id() }}')
+                .listen('MessageRead', (event) => {
+                    if (event.conversationId === {{$this->selectedConversation->id}}) {
 
-{{--        Echo.private('users.{{Auth()->User()->id}}')--}}
+                         markAsRead = true ; {{--make null => True --}}
+                    }
+                });
+            @endif
+
+
+
+
+
+
+
+{{--        Echo.private('users.{{Auth()->User()->id}}',.'App\\Notifications\\MessageRead')--}}
 {{--        .notification((notification)=>{--}}
 {{--            if(notification['type']== 'App\\Notifications\\MessageRead' && notification['conversation_id']== {{$this->selectedConversation->id}})--}}
 {{--            {--}}
-
+{{--                alert('Message Read');--}}
 {{--                markAsRead=true;--}}
 {{--            }--}}
 {{--        });--}}
 
+    "
 
-            Echo.private(`users.${userId}`)
-        .listen('.MessageRead', (event) => {
-            if ( event.conversation_id === {{ $this->selectedConversation->id }}) {
-                markAsRead = true;
-            }
-        });
-
- "
 
     @scroll-bottom.window="    {{--used in chatBox component--}}
          $nextTick(()=>
@@ -73,6 +83,7 @@
         {{-- body --}}
         <main
 
+
             @scroll="
               scropTop = $el.scrollTop;
                if(scropTop <= 0){              {{--يتم التحقق مما إذا كان التمرير قد وصل إلى أعلى العنصر تمامًا.--}}
@@ -80,7 +91,6 @@
               }"
 
             @update-chat-height.window="
-
              newHeight= $el.scrollHeight;
              oldHeight= height;
              $el.scrollTop= newHeight- oldHeight;
@@ -109,7 +119,7 @@
                     @endif
 
                     <div
-
+                        wire:key="{{time().$key}}"
                         @class([
                             'max-w-[85%] md:max-w-[78%] flex w-auto gap-2 relative mt-2',
                                     'ml-auto'=>$message->sender_id=== auth()->id(),   //هتكون أول الصفحه من اليمين
@@ -152,39 +162,30 @@
                                 </p>
 
 
-                                {{--                                 message status , only show if message belongs auth--}}
+                                {{-- message status , only show if message belongs auth --}}
 
-                                @if ($message->sender_id=== auth()->id())
+                                @if ($message->sender_id === auth()->id())
+                                    <div x-data="{markAsRead:@json($message->isRead())}">
 
-                                    <div  x-data="{markAsRead:@json($message->isRead())}">
+                                        {{-- double ticks --}}
 
-                                        @if($message->isRead())
-                                            {{--                                         double ticks--}}
-                                            <span  @class('text-gray-200')>
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                                     class="bi bi-check2-all" viewBox="0 0 16 16">
-                                                    <path
-                                                        d="M12.354 4.354a.5.5 0 0 0-.708-.708L5 10.293 1.854 7.146a.5.5 0 1 0-.708.708l3.5 3.5a.5.5 0 0 0 .708 0l7-7zm-4.208 7-.896-.897.707-.707.543.543 6.646-6.647a.5.5 0 0 1 .708.708l-7 7a.5.5 0 0 1-.708 0z"/>
-                                                    <path d="m5.354 7.146.896.897-.707.707-.897-.896a.5.5 0 1 1 .708-.708z"/>
-                                                </svg>
-                                            </span>
+                                        <span x-cloak x-show="markAsRead" @class('text-gray-200')>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2-all" viewBox="0 0 16 16">
+                                                <path d="M12.354 4.354a.5.5 0 0 0-.708-.708L5 10.293 1.854 7.146a.5.5 0 1 0-.708.708l3.5 3.5a.5.5 0 0 0 .708 0l7-7zm-4.208 7-.896-.897.707-.707.543.543 6.646-6.647a.5.5 0 0 1 .708.708l-7 7a.5.5 0 0 1-.708 0z"/>
+                                                <path d="m5.354 7.146.896.897-.707.707-.897-.896a.5.5 0 1 1 .708-.708z"/>
+                                            </svg>
+                                        </span>
 
-                                        @else
-                                            {{--                        <div  x-data="{markAsRead:@json($message->isRead())}" >--}}
+                                        {{-- single ticks --}}
+                                        <span x-show="!markAsRead" @class('text-gray-200')>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16">
+                                                <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                                            </svg>
+                                        </span>
 
-                                            {{-- single ticks--}}
-                                            <span @class('text-gray-200') >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                                     class="bi bi-check2" viewBox="0 0 16 16">
-                                                    <path
-                                                        d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
-                                                </svg>
-                                            </span>
-                                        @endif
 
                                     </div>
                                 @endif
-
 
                             </div>
 
@@ -207,7 +208,11 @@
 
                 <form
                     x-data="{body:@entangle('body')}"
-                    @submit.prevent="$wire.sendMessage"
+                    @submit.prevent="
+                    $wire.sendMessage().then(() => {
+                        $nextTick(() => body = ''); // Explicitly reset Alpine.js variable
+                    })
+                    "
                     method="POST" autocapitalize="off">
                     @csrf
 

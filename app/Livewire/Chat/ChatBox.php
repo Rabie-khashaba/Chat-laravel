@@ -4,6 +4,7 @@ namespace App\Livewire\Chat;
 
 use App\Events\SendMessage;
 use \App\Events\MessageRead;
+//use \App\Notifications\MessageRead;
 use App\Models\Message;
 use App\Notifications\MessageSent;
 
@@ -19,7 +20,7 @@ class ChatBox extends Component
     public  $pagainateVar = 10;
 
 
-    protected $listeners = ['loadMore' ];
+    protected $listeners = ['loadMore' , 'refresh'=>'$refresh' ];
 
 
     public function getListeners()
@@ -28,7 +29,6 @@ class ChatBox extends Component
         $auth_id = auth()->user()->id;
 
         return [
-
 
             //"echo-private:users.{$auth_id},.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated" => 'broadcastedNotifications',
             "echo-private:users.{$auth_id},.App\\Events\\SendMessage" => 'broadcastedNotifications',
@@ -57,11 +57,10 @@ class ChatBox extends Component
                 #mark as read
                 $newMessage->read_at = now();
                 $newMessage->save();
-                $this->dispatch('refresh');
 
                 #broadcast
 //                $this->selectedConversation->getReceiver()
-//                    ->notify(new MessageRead($this->selectedConversation->id));
+//                    ->notify(new MessageRead($this->selectedConversation->id , $this->selectedConversation->getReceiver()->id));
 
 
                 broadcast(new MessageRead(
@@ -75,6 +74,8 @@ class ChatBox extends Component
 //        }
     }
 
+
+    //used in  @scroll in chat-box.blade
     public function loadMore()
     {
         //dd('detected');
@@ -90,11 +91,32 @@ class ChatBox extends Component
     public function loadMessages()
     {
 
+        $userId = auth()->id();
         //get count
-        $count = Message::where('conversation_id' , $this->selectedConversation->id )->count();
+        $count = Message::where('conversation_id' , $this->selectedConversation->id )
+
+            ->where(function ($query) use ($userId) {
+                $query->where('sender_id', $userId)
+                    ->whereNull('sender_deleted_at');
+
+            })->orWhere(function ($query) use ($userId) {
+
+                $query->where('receiver_id', $userId)
+                    ->whereNull('receiver_deleted_at');
+            })
+            ->count();
 
         //skip and query
         $this->loadedMessages = Message::where('conversation_id' , $this->selectedConversation->id )
+            ->where(function ($query) use ($userId) {
+
+                $query->where('sender_id', $userId)
+                    ->whereNull('sender_deleted_at');
+            })->orWhere(function ($query) use ($userId) {
+
+                $query->where('receiver_id', $userId)
+                    ->whereNull('receiver_deleted_at');
+            })
             ->skip($count - $this->pagainateVar )   //
             ->take($this->pagainateVar)
             ->get();
@@ -124,6 +146,7 @@ class ChatBox extends Component
         // scroll to bottom
         $this->dispatch('scroll-bottom');
 
+
         // push message in same page of sender
         $this->loadedMessages->push($createdMessage);
 
@@ -150,6 +173,8 @@ class ChatBox extends Component
                 $this->selectedConversation,
                 $this->selectedConversation->getReceiver()->id,
         ));
+
+
 
 
     }

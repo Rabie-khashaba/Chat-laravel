@@ -20,14 +20,26 @@
 
 
 
-    Echo.private('users.{{Auth()->User()->id}}')
-    .notification((notification)=>{
-        if(notification['type']== 'App\\Notifications\\MessageRead'||notification['type']== 'App\\Notifications\\MessageSent')
-        {
+{{--    Echo.private('users.{{Auth()->User()->id}}')--}}
+{{--    .notification((notification)=>{--}}
+{{--        if(notification['type']== 'App\\Notifications\\MessageRead'||notification['type']== 'App\\Notifications\\MessageSent')--}}
+{{--        {--}}
 
-            window.Livewire.emit('refresh');
-        }
-    });
+{{--            window.Livewire.emit('refresh');--}}
+{{--        }--}}
+{{--    });--}}
+
+
+
+    @if($this->selectedConversation)
+    Echo.private('users.{{ auth()->id() }}')
+            .listen('MessageRead', (event) => {
+                if (event.conversationId === {{$this->selectedConversation->id}}) {
+
+                     $dispatch('refresh')
+                }
+            });
+    @endif
 
    "
     class="flex flex-col transition-all h-full overflow-hidden">
@@ -54,10 +66,10 @@
 
         <div class="flex gap-3 items-center overflow-x-scroll p-2 bg-white">
 
-            <button @click="type='all'" :class="{'bg-blue-100 border-0 text-black':type=='all'}" class="inline-flex justify-center items-center rounded-full gap-x-1 text-xs font-medium px-3 lg:px-5 py-1  lg:py-2.5 border ">
+            <button wire:click="getAll" @click="type='all'" :class="{'bg-blue-100 border-0 text-black':type=='all'}" class="inline-flex justify-center items-center rounded-full gap-x-1 text-xs font-medium px-3 lg:px-5 py-1  lg:py-2.5 border ">
                 All
             </button>
-            <button @click="type='deleted'" :class="{'bg-blue-100 border-0 text-black':type=='deleted'}" class="inline-flex justify-center items-center rounded-full gap-x-1 text-xs font-medium px-3 lg:px-5 py-1  lg:py-2.5 border ">
+            <button  wire:click ="getDeletedOnly" @click="type='deleted'" :class="{'bg-blue-100 border-0 text-black':type=='deleted'}" class="inline-flex justify-center items-center rounded-full gap-x-1 text-xs font-medium px-3 lg:px-5 py-1  lg:py-2.5 border ">
                 Deleted
             </button>
 
@@ -77,7 +89,7 @@
                 @foreach ($conversations as $key=> $conversation)
 
 
-                    <li
+                    <li  wire:click disabled
                         id="conversation-{{$conversation->id}}" wire:key="{{$conversation->id}}"
                         class="py-3 hover:bg-gray-50 rounded-2xl dark:hover:bg-gray-700/70 transition-colors duration-150 flex gap-4 relative w-full cursor-pointer px-2 {{$conversation->id==$selectedConversation?->id ? 'bg-gray-100/70':''}}">
                         <a href="#" class="shrink-0">
@@ -166,32 +178,33 @@
                                     <x-slot name="content">
 
                                         <div class="w-full p-1">
-
+                                            {{--View Profile--}}
                                             <button class="items-center gap-3 flex w-full px-4 py-2 text-left text-sm leading-5 text-gray-500 hover:bg-gray-100 transition-all duration-150 ease-in-out focus:outline-none focus:bg-gray-100">
 
-                                        <span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-circle" viewBox="0 0 16 16">
-                                                <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
-                                                <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/>
-                                              </svg>
-                                        </span>
-
+                                                <span>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-circle" viewBox="0 0 16 16">
+                                                        <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+                                                        <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/>
+                                                      </svg>
+                                                </span>
                                                 View Profile
 
                                             </button>
+
+                                            {{--Delete Conversation--}}
                                             <button
-                                                onclick="confirm('Are you sure?')||event.stopImmediatePropagation()"
+                                                onclick="confirm('Are you sure to deleting this conversation?')||event.stopImmediatePropagation()"
                                                 wire:click="deleteByUser('{{encrypt($conversation->id)}}')"
+{{--                                                wire:click="deleteByUser({{$conversation->id}})"--}}
                                                 class="items-center gap-3 flex w-full px-4 py-2 text-left text-sm leading-5 text-gray-500 hover:bg-gray-100 transition-all duration-150 ease-in-out focus:outline-none focus:bg-gray-100">
 
-                                        <span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash-fill" viewBox="0 0 16 16">
-                                                <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z"/>
-                                              </svg>
-                                        </span>
+                                                <span>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash-fill" viewBox="0 0 16 16">
+                                                        <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z"/>
+                                                      </svg>
+                                                </span>
 
                                                 Delete
-
                                             </button>
 
 

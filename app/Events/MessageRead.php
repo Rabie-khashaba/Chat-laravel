@@ -31,7 +31,6 @@ class MessageRead implements ShouldBroadcast
     public function broadcastWith()
     {
         return [
-            'type' => 'MessageRead',
             'conversationId' => $this->conversationId,
             'receiver_id' => $this->receiverId,
         ];
